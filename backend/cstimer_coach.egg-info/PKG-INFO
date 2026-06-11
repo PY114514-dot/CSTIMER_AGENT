@@ -1,0 +1,18 @@
+Metadata-Version: 2.4
+Name: cstimer-coach
+Version: 0.1.0
+Summary: CSTIMER 智能魔方训练助手 - 后端领域核心
+Requires-Python: >=3.11
+Requires-Dist: sqlalchemy<3.0,>=2.0
+Requires-Dist: pydantic<3.0,>=2.6
+Requires-Dist: pydantic-settings<3.0,>=2.2
+Requires-Dist: httpx<1.0,>=0.27
+Requires-Dist: tenacity<10.0,>=8.2
+Requires-Dist: python-dotenv<2.0,>=1.0
+Requires-Dist: fastapi<1.0,>=0.110
+Requires-Dist: uvicorn[standard]<1.0,>=0.27
+Requires-Dist: python-multipart>=0.0.9
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.23; extra == "dev"
+Requires-Dist: ruff>=0.4; extra == "dev"

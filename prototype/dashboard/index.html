@@ -1,0 +1,464 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>CSTIMER 智能魔方训练助手 · 原型看板</title>
+<style>
+  :root {
+    --bg:        #0b0d12;
+    --panel:     #14171f;
+    --panel-2:   #1b1f2a;
+    --line:      #262b36;
+    --text:      #e5e7eb;
+    --muted:     #94a3b8;
+    --primary:   #6366f1;
+    --primary-2: #818cf8;
+    --good:      #22c55e;
+    --warn:      #f59e0b;
+    --bad:       #ef4444;
+    --cross:     #38bdf8;
+    --f2l:       #a78bfa;
+    --oll:       #f472b6;
+    --pll:       #34d399;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg); color: var(--text);
+    font-family: -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    font-size: 14px; line-height: 1.5;
+  }
+  a { color: var(--primary-2); text-decoration: none; }
+  button {
+    background: var(--panel-2); color: var(--text);
+    border: 1px solid var(--line); border-radius: 8px;
+    padding: 8px 14px; cursor: pointer; font-size: 13px;
+  }
+  button:hover { border-color: var(--primary); }
+  button.primary {
+    background: var(--primary); border-color: var(--primary); color: white;
+  }
+  button.primary:hover { background: var(--primary-2); }
+  .topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 24px; border-bottom: 1px solid var(--line);
+    background: var(--panel);
+  }
+  .topbar .brand {
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 600; letter-spacing: 0.3px;
+  }
+  .topbar .brand .dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), #ec4899);
+  }
+  .container { max-width: 1280px; margin: 0 auto; padding: 24px; }
+  .grid {
+    display: grid; gap: 16px;
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+  .card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 14px; padding: 18px;
+  }
+  .card h3 {
+    margin: 0 0 12px 0; font-size: 13px; font-weight: 600;
+    color: var(--muted); letter-spacing: 0.5px; text-transform: uppercase;
+  }
+  .row { display: flex; align-items: center; justify-content: space-between; }
+  .muted { color: var(--muted); }
+  .stat-num {
+    font-family: ui-monospace, "JetBrains Mono", Menlo, monospace;
+    font-variant-numeric: tabular-nums; font-weight: 600;
+  }
+  /* Daily goal ring */
+  .goal-wrap { display: flex; align-items: center; gap: 18px; }
+  .goal-ring {
+    --pct: 58;
+    width: 96px; height: 96px; border-radius: 50%;
+    background:
+      conic-gradient(var(--primary) calc(var(--pct) * 1%), var(--panel-2) 0);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .goal-ring::after {
+    content: ''; width: 72px; height: 72px; border-radius: 50%;
+    background: var(--panel);
+  }
+  .goal-ring .pct {
+    position: absolute; font-weight: 700; font-size: 20px;
+  }
+  .goal-info { flex: 1; }
+  .goal-info .big {
+    font-size: 28px; font-weight: 700; line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+  }
+  .progress-bar {
+    height: 8px; background: var(--panel-2); border-radius: 4px;
+    overflow: hidden; margin-top: 8px;
+  }
+  .progress-bar .fill { height: 100%; background: var(--primary); }
+  /* AI coach */
+  .ai-card { background: linear-gradient(180deg, #1a1d28 0%, #14171f 100%); }
+  .ai-summary { font-size: 14px; line-height: 1.6; }
+  .ai-tags { display: flex; gap: 6px; flex-wrap: wrap; margin: 10px 0; }
+  .ai-tag {
+    padding: 2px 10px; border-radius: 999px; font-size: 12px;
+    background: rgba(99, 102, 241, 0.15); color: var(--primary-2);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+  }
+  .ai-tag.bad { background: rgba(239, 68, 68, 0.12); color: #fca5a5; border-color: rgba(239, 68, 68, 0.3); }
+  .ai-rec {
+    background: var(--panel-2); border-radius: 10px; padding: 10px 12px;
+    margin-top: 8px; font-size: 13px;
+  }
+  .ai-rec .meta { color: var(--muted); font-size: 11px; margin-top: 4px; }
+  /* Stage breakdown */
+  .stage-chart { display: flex; flex-direction: column; gap: 6px; }
+  .stage-bar {
+    display: flex; height: 22px; border-radius: 4px; overflow: hidden;
+    background: var(--panel-2);
+  }
+  .stage-bar .seg { display: flex; align-items: center; justify-content: center;
+    color: rgba(0,0,0,0.7); font-size: 11px; font-weight: 600; }
+  .stage-bar .cross { background: var(--cross); }
+  .stage-bar .f2l   { background: var(--f2l);   }
+  .stage-bar .oll   { background: var(--oll);   }
+  .stage-bar .pll   { background: var(--pll);   }
+  .stage-legend { display: flex; gap: 14px; font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .stage-legend .dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
+  /* Heatmap */
+  .heatmap { display: flex; flex-direction: column; gap: 3px; }
+  .heatmap .row { display: flex; align-items: center; gap: 6px; }
+  .heatmap .row .label { width: 26px; font-size: 11px; color: var(--muted); text-align: right; }
+  .heatmap .cell {
+    flex: 1; height: 16px; border-radius: 2px; background: var(--panel-2);
+  }
+  .heatmap .scale { display: flex; gap: 6px; align-items: center; margin-top: 6px; }
+  .heatmap .scale .label { font-size: 11px; color: var(--muted); }
+  /* Trend */
+  .trend-svg { width: 100%; height: 140px; }
+  /* Section */
+  .section-title {
+    display: flex; align-items: center; justify-content: space-between;
+    margin: 28px 0 12px 0;
+  }
+  .section-title h2 {
+    font-size: 15px; font-weight: 600; margin: 0; color: var(--text);
+  }
+  /* Tasks */
+  .task-list { display: flex; flex-direction: column; gap: 8px; }
+  .task {
+    display: flex; align-items: center; gap: 10px;
+    background: var(--panel-2); border-radius: 10px;
+    padding: 10px 12px;
+  }
+  .task .checkbox {
+    width: 18px; height: 18px; border-radius: 4px;
+    border: 1.5px solid var(--line); cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+  }
+  .task.done .checkbox { background: var(--good); border-color: var(--good); color: white; }
+  .task.done .title { text-decoration: line-through; color: var(--muted); }
+  .task .body { flex: 1; }
+  .task .title { font-weight: 500; font-size: 13px; }
+  .task .desc { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .task .dur { font-size: 12px; color: var(--muted); white-space: nowrap; }
+  /* Pause distribution */
+  .pause-bar {
+    display: flex; height: 24px; border-radius: 4px; overflow: hidden;
+  }
+  .pause-bar .seg {
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 600; color: rgba(0,0,0,0.75);
+  }
+  /* Footer */
+  .footer {
+    text-align: center; padding: 24px; color: var(--muted); font-size: 12px;
+  }
+  .footer code {
+    background: var(--panel-2); padding: 2px 6px; border-radius: 4px;
+  }
+  @media (max-width: 900px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+  <div class="topbar">
+    <div class="brand">
+      <span class="dot"></span>
+      CSTIMER 智能魔方训练助手
+      <span class="muted" style="font-weight: 400; margin-left: 8px;">原型 v0.1 · mock 数据</span>
+    </div>
+    <div style="display: flex; gap: 8px;">
+      <button>历史</button>
+      <button>训练</button>
+      <button class="primary">+ 新 Session</button>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- Top: 3 cards -->
+    <div class="grid">
+      <!-- 每日目标 -->
+      <div class="card">
+        <h3>每日目标</h3>
+        <div class="goal-wrap">
+          <div style="position: relative;">
+            <div class="goal-ring" id="goalRing"></div>
+            <div class="pct stat-num" id="goalPct"
+                 style="position: relative; margin-left: -48px; margin-top: 36px; width: 96px; text-align: center;">58%</div>
+          </div>
+          <div class="goal-info">
+            <div class="big stat-num"><span id="goalDone">7</span> / <span id="goalTarget">12</span></div>
+            <div class="muted" style="font-size: 12px; margin-top: 2px;">系统推荐 · 还差 5 把</div>
+            <div class="progress-bar"><div class="fill" id="goalBar" style="width: 58%;"></div></div>
+          </div>
+        </div>
+        <div style="margin-top: 14px; display: flex; gap: 8px;">
+          <button class="primary" style="flex: 1;">开始计时</button>
+          <button>调整目标</button>
+        </div>
+      </div>
+
+      <!-- 当前 Session -->
+      <div class="card">
+        <h3>当前 Session #1042</h3>
+        <div class="row">
+          <div>
+            <div class="muted" style="font-size: 12px;">avg3</div>
+            <div class="stat-num" style="font-size: 28px;">11.42s</div>
+          </div>
+          <div style="text-align: right;">
+            <div class="muted" style="font-size: 12px;">完成 12 / 12</div>
+            <div class="stat-num" style="font-size: 14px;">
+              <span style="color: var(--good);">↓ -0.6s</span>
+              <span class="muted"> vs 上次</span>
+            </div>
+          </div>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 14px;">
+          <div>
+            <div class="muted" style="font-size: 11px;">Cross</div>
+            <div class="stat-num">1.62s</div>
+          </div>
+          <div>
+            <div class="muted" style="font-size: 11px;">F2L</div>
+            <div class="stat-num" style="color: var(--bad);">6.32s</div>
+          </div>
+          <div>
+            <div class="muted" style="font-size: 11px;">OLL</div>
+            <div class="stat-num">1.88s</div>
+          </div>
+          <div>
+            <div class="muted" style="font-size: 11px;">PLL</div>
+            <div class="stat-num" style="color: var(--warn);">2.31s</div>
+          </div>
+        </div>
+        <button style="margin-top: 14px; width: 100%;">查看详情</button>
+      </div>
+
+      <!-- AI 教练 -->
+      <div class="card ai-card">
+        <h3>AI 教练 · 最近报告</h3>
+        <div class="ai-summary" id="aiSummary"></div>
+        <div class="ai-tags" id="aiTags"></div>
+        <div class="muted" style="font-size: 11px; margin: 4px 0 8px 0;">训练建议</div>
+        <div id="aiRecs"></div>
+      </div>
+    </div>
+
+    <!-- 阶段耗时分布 -->
+    <div class="section-title">
+      <h2>阶段耗时分布 · 最近 12 把</h2>
+      <div class="muted" style="font-size: 12px;">每行 = 一次复原（ms 总和归一）</div>
+    </div>
+    <div class="card">
+      <div class="stage-chart" id="stageChart"></div>
+      <div class="stage-legend">
+        <span><span class="dot" style="background: var(--cross);"></span>Cross</span>
+        <span><span class="dot" style="background: var(--f2l);"></span>F2L</span>
+        <span><span class="dot" style="background: var(--oll);"></span>OLL</span>
+        <span><span class="dot" style="background: var(--pll);"></span>PLL</span>
+      </div>
+    </div>
+
+    <!-- 停顿热图 + 分布 -->
+    <div class="grid" style="margin-top: 16px; grid-template-columns: 2fr 1fr;">
+      <div class="card">
+        <h3>停顿热图 · 12 把 × 时间窗 (1s/格)</h3>
+        <div class="heatmap" id="heatmap"></div>
+        <div class="scale">
+          <span class="label">0s</span>
+          <div style="flex: 1; height: 6px; border-radius: 3px;
+               background: linear-gradient(90deg, var(--panel-2), #6366f1, #ec4899, #f59e0b, #ef4444);"></div>
+          <span class="label">15s</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>停顿集中阶段</h3>
+        <div class="pause-bar" id="pauseBar"></div>
+        <div class="stage-legend" id="pauseLegend" style="flex-wrap: wrap;"></div>
+        <div style="margin-top: 16px;">
+          <div class="muted" style="font-size: 12px;">平均停顿时长 / 把</div>
+          <div class="stat-num" style="font-size: 24px;">4.12s</div>
+        </div>
+        <div style="margin-top: 10px;">
+          <div class="muted" style="font-size: 12px;">后半段 / 前半段</div>
+          <div class="stat-num" style="font-size: 24px; color: var(--bad);">1.13 × <span class="muted" style="font-size: 12px;">（掉速 13%）</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 趋势 -->
+    <div class="section-title">
+      <h2>历史 avg3 / avg5 趋势 · 近 9 个 Session</h2>
+      <div class="muted" style="font-size: 12px;">单位：秒</div>
+    </div>
+    <div class="card">
+      <svg class="trend-svg" id="trendChart" viewBox="0 0 800 140" preserveAspectRatio="none"></svg>
+    </div>
+
+    <!-- 今日训练项 -->
+    <div class="section-title">
+      <h2>今日训练项</h2>
+      <div class="muted" style="font-size: 12px;">点击勾选 · 自动同步</div>
+    </div>
+    <div class="card">
+      <div class="task-list" id="taskList"></div>
+    </div>
+
+    <div class="footer">
+      这是 <strong>原型 v0.1</strong>，数据来自 <code>prototype/mock/mock-data.js</code>。
+      完整版将基于 FastAPI + SQLite + LLM 实时分析（见 <code>docs/04-ai-prompt.md</code>）。
+    </div>
+  </div>
+
+  <script type="module">
+    import { todayDashboard as D } from './mock-data.js';
+
+    // ---- AI 教练 ----
+    document.getElementById('aiSummary').textContent = D.latest_ai_report.summary;
+    document.getElementById('aiTags').innerHTML = D.latest_ai_report.bottlenecks
+      .map(b => `<span class="ai-tag bad">⚠ ${b}</span>`).join('');
+    document.getElementById('aiRecs').innerHTML = D.latest_ai_report.recommendations.map(r => `
+      <div class="ai-rec">
+        <div>${r.text}</div>
+        <div class="meta">
+          <span class="ai-tag">${r.category}</span>
+          · 预计 ${r.duration_min} 分钟 · ${r.frequency === 'daily' ? '每日' : r.frequency === 'every_other_day' ? '隔日' : '每周'}
+        </div>
+      </div>
+    `).join('');
+
+    // ---- 每日目标 ----
+    const pct = Math.round(D.daily_goal.completed_value / D.daily_goal.target_value * 100);
+    document.getElementById('goalPct').textContent = pct + '%';
+    document.getElementById('goalDone').textContent = D.daily_goal.completed_value;
+    document.getElementById('goalTarget').textContent = D.daily_goal.target_value;
+    document.getElementById('goalBar').style.width = pct + '%';
+    document.getElementById('goalRing').style.setProperty('--pct', pct);
+
+    // ---- 阶段耗时堆叠图 ----
+    const maxTotal = Math.max(...D.stage_breakdown.map(s =>
+      s.cross_ms + s.f2l_ms + s.oll_ms + s.pll_ms));
+    document.getElementById('stageChart').innerHTML = D.stage_breakdown.map(s => {
+      const total = s.cross_ms + s.f2l_ms + s.oll_ms + s.pll_ms;
+      const p = (v) => (v / total * 100).toFixed(1);
+      return `
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div class="muted" style="width: 28px; font-size: 11px; text-align: right;">#${s.seq}</div>
+          <div class="stage-bar" style="flex: 1;">
+            <div class="seg cross" style="width: ${p(s.cross_ms)}%">${s.cross_ms}</div>
+            <div class="seg f2l"   style="width: ${p(s.f2l_ms)}%">${s.f2l_ms}</div>
+            <div class="seg oll"   style="width: ${p(s.oll_ms)}%">${s.oll_ms}</div>
+            <div class="seg pll"   style="width: ${p(s.pll_ms)}%">${s.pll_ms}</div>
+          </div>
+          <div class="muted stat-num" style="width: 56px; font-size: 12px; text-align: right;">
+            ${(total/1000).toFixed(2)}s
+          </div>
+        </div>`;
+    }).join('');
+
+    // ---- 停顿热图 ----
+    const stageColors = { cross: '#38bdf8', f2l: '#a78bfa', oll: '#f472b6', pll: '#34d399' };
+    function heatColor(v) {
+      // panel-2 -> indigo -> pink -> amber -> red
+      if (v < 0.05) return 'var(--panel-2)';
+      if (v < 0.2)  return '#3f3a66';
+      if (v < 0.35) return '#6366f1';
+      if (v < 0.5)  return '#ec4899';
+      if (v < 0.65) return '#f59e0b';
+      return '#ef4444';
+    }
+    document.getElementById('heatmap').innerHTML = D.pause_heatmap.map(s => `
+      <div class="row">
+        <div class="label">#${s.seq}</div>
+        ${s.bins_ms.map(v => `<div class="cell" style="background: ${heatColor(v)};"></div>`).join('')}
+      </div>
+    `).join('');
+
+    // ---- 停顿分布 ----
+    const dist = D.current_session.stats.pause_stage_dist;
+    document.getElementById('pauseBar').innerHTML = Object.entries(dist).map(([k, v]) =>
+      `<div class="seg" style="width: ${v*100}%; background: ${stageColors[k]};">${Math.round(v*100)}%</div>`
+    ).join('');
+    document.getElementById('pauseLegend').innerHTML = Object.entries(dist).map(([k, v]) =>
+      `<span><span class="dot" style="background: ${stageColors[k]};"></span>${k.toUpperCase()} ${(v*100).toFixed(0)}%</span>`
+    ).join('');
+
+    // ---- 趋势折线 ----
+    (function drawTrend() {
+      const svg = document.getElementById('trendChart');
+      const W = 800, H = 140, padL = 36, padR = 12, padT = 12, padB = 24;
+      const data = D.trend_30;
+      const xs = data.map((_, i) => padL + i * (W - padL - padR) / (data.length - 1));
+      const all = data.flatMap(d => [d.avg3_ms, d.avg5_ms]);
+      const minV = Math.min(...all) - 200, maxV = Math.max(...all) + 200;
+      const y = v => padT + (1 - (v - minV) / (maxV - minV)) * (H - padT - padB);
+      const y3 = data.map(d => y(d.avg3_ms));
+      const y5 = data.map(d => y(d.avg5_ms));
+      const path = (arr) => arr.map((py, i) => (i === 0 ? 'M' : 'L') + xs[i].toFixed(1) + ',' + py.toFixed(1)).join(' ');
+      svg.innerHTML = `
+        ${[0,0.25,0.5,0.75,1].map(t => {
+          const yy = padT + t * (H - padT - padB);
+          return `<line x1="${padL}" y1="${yy}" x2="${W-padR}" y2="${yy}" stroke="#262b36" stroke-dasharray="2 4"/>
+                  <text x="4" y="${yy+4}" fill="#94a3b8" font-size="10" font-family="monospace">${(maxV - t*(maxV-minV)/1000).toFixed(1)}s</text>`;
+        }).join('')}
+        <path d="${path(y5)}" fill="none" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4 3"/>
+        <path d="${path(y3)}" fill="none" stroke="#6366f1" stroke-width="2"/>
+        ${xs.map((x, i) => `<circle cx="${x}" cy="${y3[i]}" r="3" fill="#6366f1"/>`).join('')}
+        ${data.map((d, i) => `<text x="${xs[i]}" y="${H-6}" text-anchor="middle" fill="#94a3b8" font-size="10" font-family="monospace">${d.closed_at.slice(5)}</text>`).join('')}
+        <text x="${W-padR-4}" y="${padT+12}" text-anchor="end" fill="#6366f1" font-size="11">— avg3</text>
+        <text x="${W-padR-4}" y="${padT+26}" text-anchor="end" fill="#94a3b8" font-size="11" stroke-dasharray="2 2">-- avg5</text>
+      `;
+    })();
+
+    // ---- 训练项 ----
+    function renderTasks() {
+      document.getElementById('taskList').innerHTML = D.training_tasks.map(t => `
+        <div class="task ${t.status === 'done' ? 'done' : ''}" data-id="${t.id}">
+          <div class="checkbox" data-id="${t.id}">${t.status === 'done' ? '✓' : ''}</div>
+          <div class="body">
+            <div class="title">${t.title}</div>
+            <div class="desc">${t.description} · ${t.target_metric}</div>
+          </div>
+          <div class="dur">${t.duration_min} min</div>
+        </div>
+      `).join('');
+      document.querySelectorAll('.task .checkbox').forEach(el => {
+        el.addEventListener('click', (e) => {
+          const id = +el.dataset.id;
+          const t = D.training_tasks.find(x => x.id === id);
+          t.status = t.status === 'done' ? 'pending' : 'done';
+          renderTasks();
+        });
+      });
+    }
+    renderTasks();
+  </script>
+</body>
+</html>

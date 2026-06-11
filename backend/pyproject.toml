@@ -1,0 +1,35 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "cstimer-coach"
+version = "0.1.0"
+description = "CSTIMER 智能魔方训练助手 - 后端领域核心"
+requires-python = ">=3.11"
+dependencies = [
+    "sqlalchemy>=2.0,<3.0",
+    "pydantic>=2.6,<3.0",
+    "pydantic-settings>=2.2,<3.0",
+    "httpx>=0.27,<1.0",
+    "tenacity>=8.2,<10.0",
+    "python-dotenv>=1.0,<2.0",
+    "fastapi>=0.110,<1.0",
+    "uvicorn[standard]>=0.27,<1.0",
+    "python-multipart>=0.0.9",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
+    "ruff>=0.4",
+]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["app*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
