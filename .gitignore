@@ -21,3 +21,5 @@ node_modules/
 *.log
 /tmp/
 .docs/
+# 设计文档 (本地维护, 不入版本控制)
+docs/

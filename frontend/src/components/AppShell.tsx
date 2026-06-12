@@ -14,9 +14,8 @@ export default function AppShell() {
 
   const navItems: Array<[string, string]> = [
     ['',         t('nav.dashboard')],
-    ['timer',    t('nav.timer')],
-    ['training', t('nav.training')],
-    ['devices',  t('nav.devices') || 'Devices'],
+    ['timer',    t('nav.timer')],     // 统一入口: 计时 + 训练 + 魔方 3-in-1
+    ['devices',  t('nav.devices') || 'Devices'],  // 高级配对管理
     ['formulas', t('nav.formulas')],
     ['replay',   t('replay.title')],
     ['agent',    t('nav.agent')],
@@ -60,7 +59,7 @@ export default function AppShell() {
             <span className="text-sm text-muted-foreground hidden sm:inline">
               {user?.username}
             </span>
-            <button onClick={() => { logout(); nav('/login') }}
+            <button onClick={() => { logout(); nav('/') }}
                     className="nav-pill hover:text-destructive" title={t('logout')}>
               <LogOut size={16} />
             </button>

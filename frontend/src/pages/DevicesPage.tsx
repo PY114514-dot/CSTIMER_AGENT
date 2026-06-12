@@ -6,17 +6,18 @@ import { useT } from '@/i18n'
 import { Card, CardTitle, Button, Input, Badge, Blob, Status } from '@/components/ui'
 import { useWebSocketEvents } from '@/hooks/useWebSocketEvents'
 import { DevicesAPI } from '@/api/devices'
-import { Bluetooth, Plus, Trash2, Edit3, Check, X, AlertTriangle, Battery, Cpu } from 'lucide-react'
+import { deviceManager } from '@/services/smart-cube'
+import { Bluetooth, Plus, Trash2, Edit3, Check, X, AlertTriangle, Battery, Cpu, Radio } from 'lucide-react'
 
 type Brand = 'gan' | 'moyu' | 'qiyi' | 'gocube' | 'giiker' | 'manual'
 
 const BRANDS: Array<{ key: Brand; label: string; emoji: string; supports_mac: boolean }> = [
-  { key: 'gan',   label: 'GAN (GAN356 / i3 / iCarry / 13)',  emoji: '🌿', supports_mac: true  },
-  { key: 'moyu',  label: 'MoYu (魔域 RS3M / MFJS / WRM)',     emoji: '🟧', supports_mac: true  },
-  { key: 'qiyi',  label: 'QiYi (Qidi / Tornado)',             emoji: '🟦', supports_mac: true  },
-  { key: 'gocube',label: 'GoCube (BT/Edge)',                  emoji: '⬛', supports_mac: true  },
-  { key: 'giiker',label: 'Giiker (i3S / SuperMem)',            emoji: '🟨', supports_mac: true  },
-  { key: 'manual',label: 'No hardware · simulator only',     emoji: '🎲', supports_mac: false },
+  { key: 'gan',    label: 'GAN (GAN356 / i3 / iCarry / 13 / AiCube)', emoji: '🌿', supports_mac: true  },
+  { key: 'moyu',   label: 'MoYu (魔域 RS3M / MFJS / WRM / MHC)',       emoji: '🟧', supports_mac: true  },
+  { key: 'qiyi',   label: 'QiYi (Qidi / XMD Tornado V4 / MoFangGe)',   emoji: '🟦', supports_mac: true  },
+  { key: 'gocube', label: 'GoCube (BT / Edge / Rubik\'s Connected)',   emoji: '⬛', supports_mac: true  },
+  { key: 'giiker', label: 'Giiker (i3S / SuperMem / 小米智能魔方)',     emoji: '🟨', supports_mac: true  },
+  { key: 'manual', label: '模拟器 (无硬件)',                            emoji: '🎲', supports_mac: false },
 ]
 
 const PROTOCOL_BY_BRAND: Record<Brand, string> = {
@@ -40,7 +41,7 @@ export default function DevicesPage() {
   const [editing, setEditing] = useState<number | null>(null)
 
   const onDelete = async (id: number) => {
-    if (!confirm('Unpair this cube?')) return
+    if (!confirm(t('dev.unpair_confirm'))) return
     await DevicesAPI.delete(user.id, id)
     qc.invalidateQueries({ queryKey: ['devices', user.id] })
   }
@@ -50,40 +51,54 @@ export default function DevicesPage() {
     qc.invalidateQueries({ queryKey: ['devices', user.id] })
   }
 
+  // 给 openBluetoothScan 用的回调 (走 deviceManager 扫到设备后, 让 React 重新拉列表)
+  const onPaired = () => {
+    qc.invalidateQueries({ queryKey: ['devices', user.id] })
+  }
+
   return (
     <div className="space-y-6">
       <div className="text-center relative">
         <Blob color="moss" className="!opacity-15 -top-10 left-1/3 w-72 h-72 animate-breathe" />
-        <Badge variant="clay" icon={Bluetooth}>Smart Cube Connection</Badge>
+        <Badge variant="clay" icon={Bluetooth}>{t('dev.header')}</Badge>
         <h1 className="mt-4 font-serif text-3xl md:text-4xl text-foreground text-balance">
-          Pair your cube
+          {t('dev.pair_card_title')}
         </h1>
         <p className="text-muted-foreground mt-2 max-w-xl mx-auto text-balance">
-          Connect a GAN, MoYu, QiYi, GoCube or Giiker smart cube via Bluetooth.
-          Or pick <strong>simulator</strong> to train without hardware.
+          {t('dev.subtitle')}
         </p>
       </div>
 
       {/* 已配对设备 */}
       <Card asym={1}>
         <div className="flex items-center justify-between mb-4">
-          <CardTitle icon={Cpu}>Your devices</CardTitle>
-          <Button variant="primary" onClick={() => setShowPair(!showPair)}>
-            {showPair ? <><X size={16} /> cancel</> : <><Plus size={16} /> pair new</>}
-          </Button>
+          <CardTitle icon={Cpu}>{t('dev.your_devices')}</CardTitle>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={async () => { const ok = await openBluetoothScan(); if (ok) onPaired() }}>
+              <Radio size={16} /> {t('dev.scan_bluetooth')}
+            </Button>
+            <Button variant="primary" onClick={() => setShowPair(!showPair)}>
+              {showPair ? <><X size={16} /> {t('dev.cancel')}</> : <><Plus size={16} /> {t('dev.pair_new')}</>}
+            </Button>
+          </div>
         </div>
 
-        {isLoading && <div className="text-center text-muted-foreground py-6">Loading…</div>}
+        {isLoading && <div className="text-center text-muted-foreground py-6">{t('dev.loading')}</div>}
 
         {devices && devices.length === 0 && !showPair && (
           <div className="text-center py-12">
             <div className="inline-flex items-center justify-center h-20 w-20 rounded-full bg-muted/60 mb-4">
               <Bluetooth size={32} className="text-muted-foreground" />
             </div>
-            <p className="text-muted-foreground mb-4">No devices yet</p>
-            <Button variant="primary" onClick={() => setShowPair(true)}>
-              <Plus size={16} /> pair your first cube
-            </Button>
+            <p className="text-muted-foreground mb-4">{t('dev.no_devices')}</p>
+            <div className="flex gap-2 justify-center">
+              <Button variant="outline" onClick={async () => { const ok = await openBluetoothScan(); if (ok) onPaired() }}>
+                <Radio size={16} /> {t('dev.scan_bluetooth')}
+              </Button>
+              <Button variant="primary" onClick={() => setShowPair(true)}>
+                <Plus size={16} /> {t('dev.pair_first')}
+              </Button>
+            </div>
           </div>
         )}
 
@@ -96,7 +111,7 @@ export default function DevicesPage() {
                        onConnect={() => onConnect(d.id)}
                        onDelete={() => onDelete(d.id)}
                        onStartSolve={() => nav('/timer')}
-                       adapter="simulator" />
+                       t={t} />
           ))}
         </div>
       </Card>
@@ -104,27 +119,50 @@ export default function DevicesPage() {
       {showPair && (
         <PairCard onClose={() => setShowPair(false)}
                   onPaired={() => { setShowPair(false); qc.invalidateQueries({ queryKey: ['devices', user.id] }) }}
-                  userId={user.id} />
+                  userId={user.id} t={t} />
       )}
 
       {/* 怎么找 MAC */}
       <Card asym={3} className="p-6">
-        <CardTitle icon={AlertTriangle} accent="clay">How to find your cube's MAC address</CardTitle>
+        <CardTitle icon={AlertTriangle} accent="clay">{t('dev.how_mac_title')}</CardTitle>
         <ol className="text-sm text-foreground/80 space-y-2 list-decimal pl-6">
-          <li>GAN cube: open GAN app → Settings → About → MAC address (e.g. <code className="bg-muted/60 px-2 py-0.5 rounded text-xs font-mono">AA:BB:CC:DD:EE:FF</code>)</li>
-          <li>MoYu: MoYu Smart app → 设置 → 关于</li>
-          <li>GoCube: GoCube app → Settings → Cube Info</li>
-          <li>Or check Windows Settings → Bluetooth → your cube → Properties</li>
-          <li>Simulator: leave MAC empty, just pick the brand</li>
+          <li>{t('dev.how_mac_li1')}</li>
+          <li>{t('dev.how_mac_li2')}</li>
+          <li>{t('dev.how_mac_li3')}</li>
+          <li>{t('dev.how_mac_li4')}</li>
+          <li>{t('dev.how_mac_li5')}</li>
         </ol>
       </Card>
     </div>
   )
 }
 
+/**
+ * BLE 扫描入口: 走 deviceManager.scanAndConnect
+ *   1. 弹系统蓝牙选择窗
+ *   2. 用户选完设备后, 遍历 deviceManager 内部所有已注册 adapter 的 namePrefix
+ *   3. 自动匹配品牌 (GAN / MoYu / QiYi / GoCube / Giiker)
+ *   4. 实例化 adapter, 连接 GATT, 订阅事件
+ *   5. 适配器事件通过 registerCubeBridge 桥接到 cubeStore
+ */
+export async function openBluetoothScan(): Promise<boolean> {
+  if (!('bluetooth' in navigator)) {
+    alert('当前浏览器不支持 Web Bluetooth, 请用 Chrome / Edge')
+    return false
+  }
+  try {
+    await deviceManager.scanAndConnect()
+    return true
+  } catch (e: any) {
+    // 用户取消选设备, 或匹配失败
+    console.warn('[BLE scan] cancelled or failed:', e?.message || e)
+    return false
+  }
+}
+
 // ── 设备行 ──────────────────────────────────────────
 function DeviceRow({ d, editing, onEdit, onSaveEdit, onCancelEdit,
-                    onConnect, onDelete, onStartSolve, adapter }: any) {
+                    onConnect, onDelete, onStartSolve, t }: any) {
   const [nick, setNick] = useState(d.nickname || '')
   const status = d.state
   const online = status === 'inspecting' || status === 'solving' || status === 'scrambling'
@@ -141,7 +179,7 @@ function DeviceRow({ d, editing, onEdit, onSaveEdit, onCancelEdit,
         {editing ? (
           <div className="flex gap-2">
             <Input value={nick} onChange={e => setNick(e.target.value)}
-                   placeholder="Nickname" className="text-sm" />
+                   placeholder={t('dev.nickname_ph')} className="text-sm" />
             <Button size="sm" onClick={() => onSaveEdit(nick)}><Check size={12} /></Button>
             <Button size="sm" variant="ghost" onClick={onCancelEdit}><X size={12} /></Button>
           </div>
@@ -165,12 +203,12 @@ function DeviceRow({ d, editing, onEdit, onSaveEdit, onCancelEdit,
           <>
             {d.brand !== 'manual' && (
               <Button size="sm" variant="outline" onClick={onConnect}>
-                <Bluetooth size={12} /> connect
+                <Bluetooth size={12} /> {t('dev.connect')}
               </Button>
             )}
             {d.brand === 'manual' && (
               <Button size="sm" variant="primary" onClick={onStartSolve}>
-                start
+                {t('dev.start')}
               </Button>
             )}
             <Button size="sm" variant="ghost" onClick={onEdit}><Edit3 size={12} /></Button>
@@ -183,7 +221,7 @@ function DeviceRow({ d, editing, onEdit, onSaveEdit, onCancelEdit,
 }
 
 // ── 配对卡片 ────────────────────────────────────────
-function PairCard({ onClose, onPaired, userId }: { onClose: () => void; onPaired: () => void; userId: number }) {
+function PairCard({ onClose, onPaired, userId, t }: { onClose: () => void; onPaired: () => void; userId: number; t: (k: string) => string }) {
   const [brand, setBrand] = useState<Brand>('gan')
   const [mac, setMac] = useState('')
   const [model, setModel] = useState('')
@@ -201,7 +239,7 @@ function PairCard({ onClose, onPaired, userId }: { onClose: () => void; onPaired
         model: model.trim() || null,
         nickname: nickname.trim() || null,
         protocol: PROTOCOL_BY_BRAND[brand],
-        adapter: brand === 'manual' ? 'simulator' : 'simulator', // v1 全 simulator
+        adapter: 'simulator', // v1 全 simulator (Web Bluetooth 直连走 openBluetoothScan)
       }
       const d = await DevicesAPI.create(userId, req)
       // simulator 设备: 自动 connect 一下, 进 idle 状态
@@ -210,7 +248,7 @@ function PairCard({ onClose, onPaired, userId }: { onClose: () => void; onPaired
       }
       onPaired()
     } catch (e: any) {
-      setErr(e?.response?.data?.detail?.[0]?.msg || e?.message || 'Failed to pair')
+      setErr(e?.response?.data?.detail?.[0]?.msg || e?.message || t('dev.failed'))
     } finally {
       setSubmitting(false)
     }
@@ -220,7 +258,7 @@ function PairCard({ onClose, onPaired, userId }: { onClose: () => void; onPaired
 
   return (
     <Card asym={2} className="p-6 relative">
-      <CardTitle icon={Plus}>Pair a new cube</CardTitle>
+      <CardTitle icon={Plus}>{t('dev.pair_card_title')}</CardTitle>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mb-6">
         {BRANDS.map(b => (
@@ -230,7 +268,7 @@ function PairCard({ onClose, onPaired, userId }: { onClose: () => void; onPaired
             <div className="text-2xl mb-1">{b.emoji}</div>
             <div className="text-sm font-semibold text-foreground">{b.label}</div>
             {b.key === 'manual' && (
-              <div className="text-[10px] text-muted-foreground mt-1">No hardware needed</div>
+              <div className="text-[10px] text-muted-foreground mt-1">{t('dev.manual_hint')}</div>
             )}
           </button>
         ))}
@@ -240,28 +278,28 @@ function PairCard({ onClose, onPaired, userId }: { onClose: () => void; onPaired
         {currentBrand.supports_mac && (
           <div>
             <label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold pl-1">
-              MAC address
+              {t('dev.mac_label')}
             </label>
             <Input
               value={mac}
               onChange={e => setMac(e.target.value)}
-              placeholder="AA:BB:CC:DD:EE:FF (optional, v2 web-bluetooth)"
+              placeholder={t('dev.mac_placeholder')}
               className="mt-1 font-mono"
             />
             <p className="text-[11px] text-muted-foreground mt-1 pl-1">
-              {currentBrand.label.split(' ')[0]} MAC v2 必需 · 当前 v1 simulator 留空也能用
+              {t('dev.mac_hint').replace('{brand}', currentBrand.label.split(' ')[0])}
             </p>
           </div>
         )}
 
         <div className="grid sm:grid-cols-2 gap-3">
           <div>
-            <label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold pl-1">Model (optional)</label>
-            <Input value={model} onChange={e => setModel(e.target.value)} placeholder="e.g. GAN 356 i3" className="mt-1" />
+            <label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold pl-1">{t('dev.model')}</label>
+            <Input value={model} onChange={e => setModel(e.target.value)} placeholder={t('dev.model_ph')} className="mt-1" />
           </div>
           <div>
-            <label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold pl-1">Nickname (optional)</label>
-            <Input value={nickname} onChange={e => setNickname(e.target.value)} placeholder="My GAN" className="mt-1" />
+            <label className="text-xs uppercase tracking-wider text-muted-foreground font-semibold pl-1">{t('dev.nickname')}</label>
+            <Input value={nickname} onChange={e => setNickname(e.target.value)} placeholder={t('dev.nickname_ph')} className="mt-1" />
           </div>
         </div>
       </div>
@@ -273,9 +311,9 @@ function PairCard({ onClose, onPaired, userId }: { onClose: () => void; onPaired
       )}
 
       <div className="mt-6 flex gap-3 justify-end">
-        <Button variant="ghost" onClick={onClose}>cancel</Button>
+        <Button variant="ghost" onClick={onClose}>{t('dev.cancel')}</Button>
         <Button variant="primary" onClick={submit} disabled={submitting}>
-          {submitting ? 'pairing...' : 'pair & connect'}
+          {submitting ? t('dev.pairing') : t('dev.pair')}
         </Button>
       </div>
     </Card>

@@ -9,6 +9,7 @@ app/api/routers/__init__.py
 app/api/routers/agent.py
 app/api/routers/ai.py
 app/api/routers/dashboard.py
+app/api/routers/devices.py
 app/api/routers/formulas.py
 app/api/routers/import_data.py
 app/api/routers/replay.py
@@ -37,6 +38,8 @@ app/persistence/formula_i18n.py
 app/persistence/formula_importer.py
 app/persistence/models.py
 app/persistence/repositories.py
+app/services/__init__.py
+app/services/cube_device.py
 app/utils/__init__.py
 app/utils/async_dispatch.py
 cstimer_coach.egg-info/PKG-INFO
@@ -50,6 +53,7 @@ tests/test_api.py
 tests/test_cfop_detector.py
 tests/test_cstimer_importer.py
 tests/test_cube_model.py
+tests/test_devices.py
 tests/test_formulas.py
 tests/test_pause_and_efficiency.py
 tests/test_websocket.py

@@ -1,6 +1,7 @@
 /**
- * RTL 单测: AppShell / LoginPage / AgentPage 渲染逻辑
+ * RTL 单测: AppShell / AgentPage 渲染逻辑
  * - 不连真实后端, 用 vi.mock 替 axios
+ * - 【已移除登录页】所有原 LoginPage 用例已删除
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
@@ -64,7 +65,6 @@ import { useAppStore } from '@/store/app'
 import { UsersAPI, DashboardAPI } from '@/api/client'
 import { ai } from '@/api/agent'
 import AppShell from '@/components/AppShell'
-import LoginPage from '@/pages/LoginPage'
 import FormulasPage from '@/pages/FormulasPage'
 import AgentPage from '@/pages/AgentPage'
 import { useWebSocketEvents } from '@/hooks/useWebSocketEvents'
@@ -74,7 +74,6 @@ function renderAt(path: string, ui: React.ReactNode) {
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <MemoryRouter initialEntries={[path]}>
         <Routes>
-          <Route path="/login" element={<LoginPage />} />
           <Route path="/" element={ui} />
           <Route element={<AppShell />}>
             <Route path="/formulas" element={<FormulasPage />} />
@@ -90,30 +89,6 @@ beforeEach(() => {
   localStorage.clear()
   useAppStore.setState({ user: null, tasks: [] })
   vi.clearAllMocks()
-})
-
-describe('LoginPage', () => {
-  it('renders empty state', () => {
-    renderAt('/login', <div />)
-    expect(screen.getByPlaceholderText(/用户名/)).toBeInTheDocument()
-    expect(screen.getByText(/进入/)).toBeInTheDocument()
-  })
-
-  it('shows error if empty submit', async () => {
-    renderAt('/login', <div />)
-    await userEvent.click(screen.getByText(/^进入$/))
-    expect(await screen.findByText(/请输入用户名/)).toBeInTheDocument()
-  })
-
-  it('calls UsersAPI.create on submit and stores user', async () => {
-    const fakeUser = { id: 1, username: 'alice', timezone: 'Asia/Shanghai', created_at: 0 }
-    vi.mocked(UsersAPI.create).mockResolvedValue(fakeUser)
-    renderAt('/login', <div />)
-    await userEvent.type(screen.getByPlaceholderText(/用户名/), 'alice')
-    await userEvent.click(screen.getByText(/^进入$/))
-    await waitFor(() => expect(UsersAPI.create).toHaveBeenCalledWith('alice'))
-    expect(JSON.parse(localStorage.getItem('cstimer_user_v1')!)).toEqual(fakeUser)
-  })
 })
 
 describe('FormulasPage', () => {

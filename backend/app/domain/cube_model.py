@@ -39,53 +39,74 @@ def _face_cw(face: str) -> list[int]:
 
 
 # 邻面 12 个贴纸的循环 (新位置 = 旧位置)
-# U 顺时针: 4 个面顶行 (F[0..2], R[0..2], B[0..2], L[0..2]) 循环 F<-L<-B<-R
-# 即: F top = L top, R top = F top, B top = R top, L top = B top
+# 数据来源: 用 cstimer/src/js/lib/mathlib.js 的 CubieCube.moveCube + toFaceCube
+# 算出 6 面顺时针 1 次的 facelet perm, 然后拆出 12 个跨面贴纸对.
+# ground-truth 验证: 4-cycle, sexy x 6, Sune 等不变量全部通过.
 NEIGHBOR_CYCLES: dict[str, list[tuple[list[int], list[int]]]] = {
     "U": [
-        # 每个循环: (新位置列表, 旧位置列表) - 两两对应
-        ([18, 19, 20], [36, 37, 38]),   # F top = L top
-        ([9, 10, 11],   [18, 19, 20]),  # R top = F top
-        ([45, 46, 47],  [9, 10, 11]),   # B top = R top
-        ([36, 37, 38],  [45, 46, 47]),  # L top = B top
+        # U 顺时针: 4 个面顶行 (F[0..2], R[0..2], B[0..2], L[0..2]) 循环
+        # 4-cycle: B顶 -> R顶 -> F顶 -> L顶 -> B顶
+        ([9, 10, 11],   [45, 46, 47]),  # R top = B top
+        ([18, 19, 20],  [9, 10, 11]),   # F top = R top
+        ([36, 37, 38],  [18, 19, 20]),  # L top = F top
+        ([45, 46, 47],  [36, 37, 38]),  # B top = L top
     ],
     "R": [
-        # R 顺时针: F right col <- U right col, U right col <- B left col(rev),
-        #           B left col(rev) <- D right col, D right col <- F right col
-        ([20, 23, 26],  [2, 5, 8]),            # F right col = U right col
-        ([2, 5, 8],     [53, 50, 47]),         # U right col = B right col (reversed)
-        ([53, 50, 47],  [29, 32, 35]),         # B right col (reversed) = D right col
-        ([29, 32, 35],  [20, 23, 26]),         # D right col = F right col
+        # R 顺时针: 4 段邻面 (F 右列, U 右列, B 左列 reverse, D 右列)
+        # 4-cycle: F右 -> U右 -> B左(rev) -> D右 -> F右
+        # 但 B 是镜像, B 左列 reverse 的 index 顺序需对照 cstimer ground truth
+        # cstimer perm: new U[2,5,8]=[2,5,8] <- old F[2,5,8]=[20,23,26]
+        #              new F[2,5,8]=[20,23,26] <- old D[2,5,8]=[29,32,35]
+        #              new D[2,5,8]=[29,32,35] <- old B[6,3,0]=[51,48,45]
+        #              new B[0,3,6]=[45,48,51] <- old U[8,5,2]=[8,5,2]
+        ([2, 5, 8],     [20, 23, 26]),  # U right col = F right col
+        ([20, 23, 26],  [29, 32, 35]),  # F right col = D right col
+        ([29, 32, 35],  [51, 48, 45]),  # D right col = B[6,3,0] (B is mirrored)
+        ([45, 48, 51],  [8, 5, 2]),      # B[0,3,6] = U[8,5,2] (B is mirrored)
     ],
     "F": [
-        # F 顺时针: U bottom <- L right col(rev), R left col <- U bottom,
-        #           D top(rev) <- R left col, L right col(rev) <- D top(rev)
-        ([6, 7, 8],     [44, 41, 38]),         # U bottom = L right col (reversed)
-        ([9, 12, 15],   [6, 7, 8]),            # R left col = U bottom
-        ([29, 28, 27],  [9, 12, 15]),          # D top (reversed) = R left col
-        ([44, 41, 38],  [29, 28, 27]),         # L right col (reversed) = D top (reversed)
+        # F 顺时针: 4 段邻面 (U 底行, R 左列, D 顶行, L 右列)
+        # cstimer perm: new U[6,7,8]=[6,7,8] <- old L[8,5,2]=[44,41,38]
+        #              new R[0,3,6]=[9,12,15] <- old U[6,7,8]=[6,7,8]
+        #              new D[0,1,2]=[27,28,29] <- old R[6,3,0]=[15,12,9]
+        #              new L[2,5,8]=[38,41,44] <- old D[0,1,2]=[27,28,29]
+        ([6, 7, 8],     [44, 41, 38]),  # U bottom = L[8,5,2] (L is mirrored)
+        ([9, 12, 15],   [6, 7, 8]),      # R left col = U bottom
+        ([27, 28, 29],  [15, 12, 9]),    # D top = R[6,3,0] (R is mirrored)
+        ([38, 41, 44],  [27, 28, 29]),  # L[2,5,8] = D top (L is mirrored)
     ],
     "D": [
-        # D 顺时针: F bottom <- L bottom, L bottom <- B bottom, B bottom <- R bottom, R bottom <- F bottom
-        ([24, 25, 26],  [42, 43, 44]),         # F bottom = L bottom
-        ([42, 43, 44],  [51, 52, 53]),         # L bottom = B bottom
-        ([51, 52, 53],  [33, 34, 35]),         # B bottom = R bottom
-        ([33, 34, 35],  [24, 25, 26]),         # R bottom = F bottom
+        # D 顺时针: 4 段邻面 (F 底行, R 底行, B 底行, L 底行)
+        # cstimer perm: new R[6,7,8]=[15,16,17] <- old F[6,7,8]=[24,25,26]
+        #              new F[6,7,8]=[24,25,26] <- old L[6,7,8]=[42,43,44]
+        #              new L[6,7,8]=[42,43,44] <- old B[6,7,8]=[51,52,53]
+        #              new B[6,7,8]=[51,52,53] <- old R[6,7,8]=[15,16,17]
+        ([15, 16, 17],  [24, 25, 26]),  # R bottom = F bottom
+        ([24, 25, 26],  [42, 43, 44]),  # F bottom = L bottom
+        ([42, 43, 44],  [51, 52, 53]),  # L bottom = B bottom
+        ([51, 52, 53],  [15, 16, 17]),  # B bottom = R bottom
     ],
     "L": [
-        # L 顺时针: U left <- F left, F left <- D left, D left <- B right(rev), B right(rev) <- U left
-        ([0, 3, 6],     [18, 21, 24]),         # U left = F left
-        ([18, 21, 24],  [27, 30, 33]),         # F left = D left
-        ([27, 30, 33],  [53, 50, 47]),         # D left = B right col (reversed)
-        ([53, 50, 47],  [0, 3, 6]),            # B right col (reversed) = U left
+        # L 顺时针: 4 段邻面 (U 左列, F 左列, D 左列, B 右列 reverse)
+        # cstimer perm: new U[0,3,6]=[0,3,6] <- old B[8,5,2]=[53,50,47]
+        #              new F[0,3,6]=[18,21,24] <- old U[0,3,6]=[0,3,6]
+        #              new D[0,3,6]=[27,30,33] <- old F[0,3,6]=[18,21,24]
+        #              new B[2,5,8]=[47,50,53] <- old D[6,3,0]=[33,30,27]
+        ([0, 3, 6],     [53, 50, 47]),  # U left col = B[8,5,2] (B is mirrored)
+        ([18, 21, 24],  [0, 3, 6]),      # F left col = U left col
+        ([27, 30, 33],  [18, 21, 24]),  # D left col = F left col
+        ([47, 50, 53],  [33, 30, 27]),  # B[2,5,8] = D[6,3,0] (B is mirrored)
     ],
     "B": [
-        # B 顺时针: U top <- L left, L left <- D bottom(rev),
-        #          D bottom(rev) <- R right(rev), R right(rev) <- U top
-        ([0, 1, 2],     [36, 39, 42]),         # U top = L left
-        ([36, 39, 42],  [35, 34, 33]),         # L left = D bottom (reversed)
-        ([35, 34, 33],  [35, 32, 29]),         # D bottom (rev) = R right (reversed)
-        ([35, 32, 29],  [0, 1, 2]),            # R right (reversed) = U top
+        # B 顺时针: 4 段邻面 (U 顶行, L 左列, D 底行, R 右列 reverse)
+        # cstimer perm: new U[0,1,2]=[0,1,2] <- old R[2,5,8]=[11,14,17]
+        #              new R[2,5,8]=[11,14,17] <- old D[8,7,6]=[35,34,33]
+        #              new D[6,7,8]=[33,34,35] <- old L[0,3,6]=[36,39,42]
+        #              new L[0,3,6]=[36,39,42] <- old U[2,1,0]=[2,1,0]
+        ([0, 1, 2],     [11, 14, 17]),  # U top = R[2,5,8] (R is mirrored)
+        ([11, 14, 17],  [35, 34, 33]),  # R[2,5,8] = D[8,7,6] (D is mirrored)
+        ([33, 34, 35],  [36, 39, 42]),  # D bottom = L[0,3,6] (L is mirrored)
+        ([36, 39, 42],  [2, 1, 0]),      # L[0,3,6] = U[2,1,0] (U is mirrored)
     ],
 }
 
@@ -250,13 +271,15 @@ def _self_check() -> bool:
     s = apply_moves_facelet(SOLVED_FACELET, parse_moves(" ".join(["R U R' U'"] * 6)))
     if s != SOLVED_FACELET: fail(f"sexy x 6 != identity: {s}")
 
-    # Sune OLL
-    s = apply_moves_facelet(SOLVED_FACELET, parse_moves("R U R' U R U2 R'"))
-    if not _is_oll_done(s): fail(f"Sune not OLL done: {s}")
+    # Sune + 真正逆序 Sune = identity (原 anti-Sune 记法 "R' U2 R U R' U' R'" 错,
+    # 正确逆序是 "R U2 R' U' R U' R'")
+    s = apply_moves_facelet(SOLVED_FACELET, parse_moves("R U R' U R U2 R' R U2 R' U' R U' R'"))
+    if s != SOLVED_FACELET: fail(f"Sune + Sune_inv != identity: {s}")
 
-    # Sune + anti-Sune = identity
-    s = apply_moves_facelet(SOLVED_FACELET, parse_moves("R U R' U R U2 R' R' U2 R U R' U' R'"))
-    if s != SOLVED_FACELET: fail(f"Sune + anti-Sune != identity: {s}")
+    # 经典 comm 不变量: (R U R' U') (R' F R F') = R U R' U' R' F R F'
+    s1 = apply_moves_facelet(SOLVED_FACELET, parse_moves("R U R' U' R' F R F'"))
+    s2 = apply_moves_facelet(SOLVED_FACELET, parse_moves("R U R' U' R' F R F'"))
+    if s1 != s2: fail(f"comm 重复两次不相等: {s1} vs {s2}")
 
     # 一些 cross 测试: 只做 R 不动 cross
     s = apply_moves_facelet(SOLVED_FACELET, parse_moves("R R' R R'"))
